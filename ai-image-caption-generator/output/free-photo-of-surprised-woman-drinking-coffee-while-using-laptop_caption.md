@@ -1,0 +1,2 @@
+
+The main subject of the image is an outdoor scene with a person standing in front of it. The background features trees, suggesting that this might be a park or a garden setting. There are no other people visible in the image.
