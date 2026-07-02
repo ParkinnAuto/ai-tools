@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
     origin:[
       "http://localhost:8081",
-      "https://ckq-client.vercel.app"
+      "https://ckq-resume.vercel.app"
     ],
     methods:["GET", "POST"],
     credentials:true
