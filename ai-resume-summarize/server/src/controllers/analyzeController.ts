@@ -3,6 +3,8 @@ import axios from "axios";
 import FormData from "form-data";
 import fs from "fs";
 
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://localhost:8000";
+
 export const analyzeResume = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
@@ -19,7 +21,7 @@ export const analyzeResume = async (req: Request, res: Response) => {
     });
 
     const aiResponse = await axios.post(
-      "http://localhost:8000/analyze",
+      `${AI_SERVICE_URL}/analyze`,
       formData,
       {
         headers: formData.getHeaders(),
