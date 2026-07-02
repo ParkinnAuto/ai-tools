@@ -3,6 +3,7 @@
 CKQ is a simple cross-platform AI resume screening assistant designed to help HR users quickly analyze resumes and CVs.
 
 The application allows users to upload a resume file, extract its content, and generate a structured HR-focused summary using an external AI API. It is built as a personal learning project to practice full-stack development, AI API integration, file upload handling, and cross-platform application development.
+
 URL to website: ckq-resume.vercel.app
 ---
 
