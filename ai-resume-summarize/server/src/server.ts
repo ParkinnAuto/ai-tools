@@ -10,7 +10,10 @@ const PORT = process.env.PORT || 5000;
 
 // Connect with frontend
 app.use(cors({
-    origin:true,
+    origin:[
+      "http://localhost:8081",
+      "https://ckq-client.vercel.app"
+    ],
     methods:["GET", "POST"],
     credentials:true
 }));
