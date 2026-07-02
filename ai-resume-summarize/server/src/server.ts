@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 5000;
 
 // Connect with frontend
 app.use(cors({
-    origin:["http://localhost:8081"],
+    origin:true,
     methods:["GET", "POST"],
     credentials:true
 }));
