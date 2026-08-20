@@ -13,12 +13,14 @@ interface SpeechRecognitionEvent extends Event {
   };
 }
 
-// Type ของตัว recognition
+// Type ของตัว Speech Recognition
 interface SpeechRecognitionInstance {
   lang: string;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
   onend: (() => void) | null;
+  onspeechend: (() => void) | null;
   start: () => void;
+  stop: () => void;
 }
 
 // Type ของ constructor
@@ -33,11 +35,10 @@ const TalkButton = () => {
   // เก็บภาษาที่เลือก
   const [language, setLanguage] = useState("th-TH");
 
-  // เช็กว่าตอนนี้กำลังฟังเสียงอยู่ไหม
+  // เช็กว่ากำลังฟังอยู่หรือไม่
   const [isListening, setIsListening] = useState(false);
 
   const startListening = () => {
-    // รองรับทั้ง SpeechRecognition และ webkitSpeechRecognition
     const speechWindow = window as typeof window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
@@ -55,21 +56,41 @@ const TalkButton = () => {
     // สร้างตัวรับเสียง
     const recognition = new SpeechRecognition();
 
-    // ใช้ภาษาที่ user เลือก
+    // ใช้ภาษาที่เลือก
     recognition.lang = language;
 
-    // เปลี่ยนสถานะเป็นกำลังฟัง
+    // Timer สำหรับนับเวลาเงียบ
+    let silenceTimer: ReturnType<typeof setTimeout>;
+
+    // ถ้าเงียบ 3 วินาที ให้หยุดไมค์
+    const stopAfterSilence = () => {
+      clearTimeout(silenceTimer);
+
+      silenceTimer = setTimeout(() => {
+        console.log("Silence for 3 seconds → stop listening");
+        recognition.stop();
+      }, 3000);
+    };
+
+    // เปลี่ยนปุ่มเป็น Listening
     setIsListening(true);
 
-    // เมื่อ browser แปลงเสียงเป็นข้อความเสร็จ
+    // เริ่มนับ 3 วินาทีตั้งแต่เปิดไมค์
+    stopAfterSilence();
+
+    // เมื่อ browser ได้ข้อความจากเสียง
     recognition.onresult = async (event) => {
+      // หยุด timer เดิม
+      clearTimeout(silenceTimer);
+
       const transcript = event.results[0][0].transcript;
 
       setText(transcript);
+
       console.log("You said:", transcript);
 
       try {
-        // ส่งข้อความไป Next.js API
+        // ส่งข้อความไป Gemini ผ่าน API ของเรา
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -91,23 +112,37 @@ const TalkButton = () => {
 
         // แสดงคำตอบ AI
         console.log("AI:", data.reply);
+
         setText(data.reply);
 
         // อ่านคำตอบ AI ออกเสียง
         const speech = new SpeechSynthesisUtterance(data.reply);
+
         speech.lang = language;
 
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(speech);
       } catch (error) {
         console.error("Fetch error:", error);
+
         setText("Connection error");
       }
     };
 
-    // เมื่อหยุดฟัง ไม่ว่าจะได้ข้อความหรือไม่
+    // เมื่อเราพูดจบ เริ่มนับเวลาเงียบ 3 วินาที
+    recognition.onspeechend = () => {
+      console.log("Speech ended");
+
+      stopAfterSilence();
+    };
+
+    // เมื่อ Speech Recognition หยุด
     recognition.onend = () => {
+      clearTimeout(silenceTimer);
+
       setIsListening(false);
+
+      console.log("Microphone stopped");
     };
 
     // เริ่มฟังไมค์
@@ -130,7 +165,7 @@ const TalkButton = () => {
         <option value="es-ES">🇪🇸 Español</option>
       </select>
 
-      {/* ปุ่มฟังเสียง */}
+      {/* ปุ่มเปิดไมค์ */}
       <button
         onClick={startListening}
         disabled={isListening}
