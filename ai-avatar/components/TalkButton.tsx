@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-// ผลลัพธ์ที่ Speech Recognition ส่งกลับ
+// Type ของผลลัพธ์จาก Speech Recognition
 interface SpeechRecognitionEvent extends Event {
   results: {
     [index: number]: {
@@ -13,7 +13,7 @@ interface SpeechRecognitionEvent extends Event {
   };
 }
 
-// ตัว recognition ที่เราใช้งาน
+// Type ของตัว recognition
 interface SpeechRecognitionInstance {
   lang: string;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
@@ -21,40 +21,23 @@ interface SpeechRecognitionInstance {
   start: () => void;
 }
 
-// constructor สำหรับสร้าง recognition
+// Type ของ constructor
 interface SpeechRecognitionConstructor {
   new (): SpeechRecognitionInstance;
 }
 
 const TalkButton = () => {
+  // เก็บข้อความที่พูด / AI ตอบ
   const [text, setText] = useState("");
+
+  // เก็บภาษาที่เลือก
   const [language, setLanguage] = useState("th-TH");
+
+  // เช็กว่าตอนนี้กำลังฟังเสียงอยู่ไหม
   const [isListening, setIsListening] = useState(false);
 
-  // อ่านข้อความออกเสียง
-  const speakText = (message: string) => {
-    if (!("speechSynthesis" in window)) {
-      console.log("Speech synthesis not supported");
-      return;
-    }
-
-    // ยกเลิกเสียงเก่าก่อน
-    window.speechSynthesis.cancel();
-
-    const speech = new SpeechSynthesisUtterance(message);
-
-    speech.lang = language;
-    speech.volume = 1;
-    speech.rate = 1;
-    speech.pitch = 1;
-
-    // มือถือบางเครื่องต้องหน่วงนิดหนึ่ง
-    setTimeout(() => {
-      window.speechSynthesis.speak(speech);
-    }, 150);
-  };
-
   const startListening = () => {
+    // รองรับทั้ง SpeechRecognition และ webkitSpeechRecognition
     const speechWindow = window as typeof window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
@@ -69,19 +52,16 @@ const TalkButton = () => {
       return;
     }
 
-    /*
-      ปลุกระบบเสียงจาก user gesture โดยตรง
-      ช่วยให้มือถืออนุญาต speechSynthesis ได้ง่ายขึ้น
-    */
-    const unlockSpeech = new SpeechSynthesisUtterance("");
-    window.speechSynthesis.speak(unlockSpeech);
-
+    // สร้างตัวรับเสียง
     const recognition = new SpeechRecognition();
 
+    // ใช้ภาษาที่ user เลือก
     recognition.lang = language;
 
+    // เปลี่ยนสถานะเป็นกำลังฟัง
     setIsListening(true);
 
+    // เมื่อ browser แปลงเสียงเป็นข้อความเสร็จ
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
 
@@ -89,7 +69,7 @@ const TalkButton = () => {
       console.log("You said:", transcript);
 
       try {
-        // ส่งข้อความไปให้ Gemini
+        // ส่งข้อความไป Next.js API
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -110,23 +90,27 @@ const TalkButton = () => {
         }
 
         // แสดงคำตอบ AI
-        setText(data.reply);
         console.log("AI:", data.reply);
+        setText(data.reply);
 
-        // อ่านคำตอบออกเสียง
-        speakText(data.reply);
+        // อ่านคำตอบ AI ออกเสียง
+        const speech = new SpeechSynthesisUtterance(data.reply);
+        speech.lang = language;
 
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(speech);
       } catch (error) {
         console.error("Fetch error:", error);
         setText("Connection error");
       }
     };
 
-    // หยุดฟังแล้วให้ปุ่มกลับสีเดิม
+    // เมื่อหยุดฟัง ไม่ว่าจะได้ข้อความหรือไม่
     recognition.onend = () => {
       setIsListening(false);
     };
 
+    // เริ่มฟังไมค์
     recognition.start();
   };
 
@@ -146,7 +130,7 @@ const TalkButton = () => {
         <option value="es-ES">🇪🇸 Español</option>
       </select>
 
-      {/* ปุ่มเริ่มฟัง */}
+      {/* ปุ่มฟังเสียง */}
       <button
         onClick={startListening}
         disabled={isListening}
