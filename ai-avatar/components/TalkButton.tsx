@@ -17,6 +17,7 @@ interface SpeechRecognitionEvent extends Event {
 interface SpeechRecognitionInstance {
   lang: string;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
   start: () => void;
 }
 
@@ -26,11 +27,14 @@ interface SpeechRecognitionConstructor {
 }
 
 const TalkButton = () => {
-  // เก็บข้อความที่พูด/AI ตอบ
+  // เก็บข้อความที่พูด / AI ตอบ
   const [text, setText] = useState("");
 
   // เก็บภาษาที่เลือก
   const [language, setLanguage] = useState("th-TH");
+
+  // เช็กว่าตอนนี้กำลังฟังเสียงอยู่ไหม
+  const [isListening, setIsListening] = useState(false);
 
   const startListening = () => {
     // รองรับทั้ง SpeechRecognition และ webkitSpeechRecognition
@@ -54,6 +58,9 @@ const TalkButton = () => {
     // ใช้ภาษาที่ user เลือก
     recognition.lang = language;
 
+    // เปลี่ยนสถานะเป็นกำลังฟัง
+    setIsListening(true);
+
     // เมื่อ browser แปลงเสียงเป็นข้อความเสร็จ
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
@@ -62,7 +69,7 @@ const TalkButton = () => {
       console.log("You said:", transcript);
 
       try {
-        // ส่งข้อความไปที่ Next.js API route
+        // ส่งข้อความไป Next.js API
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {
@@ -82,7 +89,7 @@ const TalkButton = () => {
           return;
         }
 
-        // แสดงคำตอบจาก AI
+        // แสดงคำตอบ AI
         console.log("AI:", data.reply);
         setText(data.reply);
 
@@ -98,13 +105,18 @@ const TalkButton = () => {
       }
     };
 
+    // เมื่อหยุดฟัง ไม่ว่าจะได้ข้อความหรือไม่
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
     // เริ่มฟังไมค์
     recognition.start();
   };
 
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/90 p-3 shadow-2xl md:flex-row md:items-center">
-      
+
       {/* เลือกภาษา */}
       <select
         value={language}
@@ -118,12 +130,20 @@ const TalkButton = () => {
         <option value="es-ES">🇪🇸 Español</option>
       </select>
 
-      {/* เริ่มฟังเสียง */}
+      {/* ปุ่มฟังเสียง */}
       <button
         onClick={startListening}
-        className="h-12 rounded-xl bg-cyan-500 px-7 font-semibold text-slate-950 transition hover:bg-cyan-400 active:scale-95"
+        disabled={isListening}
+        className={`
+          h-12 rounded-xl px-7 font-semibold transition active:scale-95
+          ${
+            isListening
+              ? "bg-red-500 text-white"
+              : "bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+          }
+        `}
       >
-        🎤 Talk
+        {isListening ? "🎙️ Listening..." : "🎤 Talk"}
       </button>
 
       {/* แสดงข้อความ */}
