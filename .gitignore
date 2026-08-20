@@ -15,3 +15,5 @@ __pycache__/
 *.webp
 
 */recordings/
+
+git_commands.md
